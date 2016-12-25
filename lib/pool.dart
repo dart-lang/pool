@@ -121,6 +121,55 @@ class Pool {
     });
   }
 
+  /// Requests a resource for the combined duration of the [callback] and the
+  /// processing of the Stream it returns.
+  /// (E.g. a database connection is hold until the the results get processed.)
+  Stream/*<T>*/ streamWithResource/*<T>*/(Stream/*<T>*/ callback()) {
+    StreamController/*<T>*/ streamController;
+    StreamSubscription/*<T>*/ streamSubscription;
+    PoolResource poolResource;
+    final complete = () {
+      if (streamSubscription != null) {
+        streamSubscription.cancel();
+        streamSubscription = null;
+      }
+      if (poolResource != null) {
+        poolResource.release();
+        poolResource = null;
+      }
+      if (!streamController.isClosed) {
+        streamController.close();
+      }
+    };
+    final completeWithError = (e, st) {
+      if (!streamController.isClosed) {
+        streamController.addError(e, st);
+      }
+      complete();
+    };
+    streamController = new StreamController/*<T>*/(
+        onCancel: complete,
+        onPause: () => streamSubscription?.pause(),
+        onResume: () => streamSubscription?.resume());
+    request().then((resource) {
+      poolResource = resource;
+      try {
+        Stream/*<T>*/ stream = callback();
+        if (stream == null) {
+          complete();
+          return null;
+        }
+        streamSubscription = stream.listen(streamController.add,
+            onError: streamController.addError,
+            onDone: complete,
+            cancelOnError: true);
+      } catch (e, st) {
+        completeWithError(e, st);
+      }
+    }, onError: completeWithError);
+    return streamController.stream;
+  }
+
   /// Closes the pool so that no more resources are requested.
   ///
   /// Existing resource requests remain unchanged.

@@ -105,6 +105,99 @@ void main() {
     });
   });
 
+  group("streamWithResource()", () {
+    test("The Stream holds a resource until it is completed.", () async {
+      var streamController = new StreamController<int>();
+      var pool = new Pool(1);
+      pool.streamWithResource(() => streamController.stream);
+
+      bool nextTaskCompleted = false;
+      pool.withResource(() {
+        nextTaskCompleted = true;
+      });
+
+      await new Future.delayed(new Duration());
+      expect(nextTaskCompleted, isFalse);
+      streamController.close();
+
+      await new Future.delayed(new Duration());
+      expect(nextTaskCompleted, isTrue);
+    });
+
+    test("Cancelling the Stream propagates and releases the resource.", () async {
+      bool cancelReceived = false;
+      var streamController = new StreamController<int>(onCancel: () {
+        cancelReceived = true;
+      });
+      var pool = new Pool(1);
+      StreamSubscription<int> subscription = pool
+          .streamWithResource(() => streamController.stream)
+          .listen(null);
+
+      bool nextTaskCompleted = false;
+      pool.withResource(() {
+        nextTaskCompleted = true;
+      });
+
+      await new Future.delayed(new Duration());
+      expect(nextTaskCompleted, isFalse);
+      expect(cancelReceived, isFalse);
+      subscription.cancel();
+      expect(cancelReceived, isTrue);
+
+      await new Future.delayed(new Duration());
+      expect(nextTaskCompleted, isTrue);
+    });
+
+    test("Simple Stream example.", () async {
+      var pool = new Pool(1);
+      var result = await pool
+          .streamWithResource(() => new Stream.fromIterable([0, 1, 2]))
+          .toList();
+      expect(result, [0, 1, 2]);
+    });
+
+    test("Callback returns null.", () async {
+      var pool = new Pool(1);
+      var resultFuture = pool
+          .streamWithResource(() => null)
+          .toList();
+
+      bool nextTaskCompleted = false;
+      pool.withResource(() {
+        nextTaskCompleted = true;
+      });
+
+      expect(nextTaskCompleted, isFalse);
+      var result = await resultFuture;
+      expect(nextTaskCompleted, isTrue);
+      expect(result, []);
+    });
+
+    test("Callback is not run until resource is available.", () async {
+      var pool = new Pool(1);
+      Completer previousTaskCompleter = new Completer();
+      pool.withResource(() => previousTaskCompleter.future);
+
+      bool callbackCalled = false;
+      var resultFuture = pool
+          .streamWithResource(() {
+            callbackCalled = true;
+            return null;
+          })
+          .toList();
+
+      await new Future.delayed(new Duration());
+      expect(callbackCalled, isFalse);
+      previousTaskCompleter.complete();
+
+      await new Future.delayed(new Duration());
+      expect(callbackCalled, isTrue);
+      var result = await resultFuture;
+      expect(result, []);
+    });
+  });
+
   group("with a timeout", () {
     test("doesn't time out if there are no pending requests", () {
       new FakeAsync().run((async) {
