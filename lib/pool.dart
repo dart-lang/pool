@@ -183,8 +183,7 @@ class Pool {
       _allocatedResources--;
       if (_allocatedResources == 0) _closeGroup.close();
     } else {
-      _onReleaseCallbacks.add(
-          Zone.current.bindCallback(onRelease, runGuarded: false));
+      _onReleaseCallbacks.add(Zone.current.bindCallback(onRelease));
     }
   }
 
