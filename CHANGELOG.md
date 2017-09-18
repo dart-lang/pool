@@ -1,7 +1,6 @@
-## 1.3.1
+## 1.3.2
 
-* Fix the type annotation of `Pool.withResource()` to indicate that it takes
-  `() -> FutureOr<T>`.
+* Update to make the code work with strong-mode clean Zone API.
 
 ## 1.3.0
 
