@@ -183,7 +183,9 @@ class Pool {
       _allocatedResources--;
       if (_allocatedResources == 0) _closeGroup.close();
     } else {
-      _onReleaseCallbacks.add(Zone.current.bindCallback(onRelease));
+      var zone = Zone.current;
+      var registered = zone.registerCallback(onRelease);
+      _onReleaseCallbacks.add(() => zone.run(registered));
     }
   }
 
