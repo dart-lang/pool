@@ -436,6 +436,10 @@ void main() {
       completer.completeError("oh no!");
     });
   });
+
+  test("throw error when pool limit <= 0", () {
+    expect(() => Pool(-1), throwsArgumentError);
+  });
 }
 
 /// Returns a function that will cause the test to fail if it's called.
