@@ -439,6 +439,7 @@ void main() {
 
   test("throw error when pool limit <= 0", () {
     expect(() => Pool(-1), throwsArgumentError);
+    expect(() => Pool(0), throwsArgumentError);
   });
 }
 
