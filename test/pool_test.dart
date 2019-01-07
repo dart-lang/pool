@@ -531,7 +531,7 @@ void main() {
               expect(finishedItems, itemCount);
 
               final expectedElapsed =
-                  delayedToStringDuration.inMicroseconds * 2.5;
+                  delayedToStringDuration.inMicroseconds * 3;
 
               expect((watch.elapsed ~/ itemCount).inMicroseconds,
                   lessThan(expectedElapsed / (poolSize - otherTaskCount)),

@@ -148,48 +148,45 @@ class Pool {
     Completer resumeCompleter;
     StreamController<T> controller;
 
+    Iterator<S> iterator;
+
+    Future<void> run() async {
+      while (iterator.moveNext()) {
+        // caching `current` is necessary because there are async breaks
+        // in this code and `iterator` is shared across many workers
+        final current = iterator.current;
+
+        _resetTimer();
+
+        await resumeCompleter?.future;
+
+        if (cancelPending) {
+          break;
+        }
+
+        T value;
+        try {
+          value = await action(current);
+        } catch (e, stack) {
+          if (onError(current, e, stack)) {
+            controller.addError(e, stack);
+          }
+          continue;
+        }
+        controller.add(value);
+      }
+    }
+
     Future doneFuture;
 
     void onListen() {
+      assert(iterator == null);
+      iterator = elements.iterator;
+
       assert(doneFuture == null);
-
-      var iterator = elements.iterator;
-
       doneFuture = Future.wait(
-              Iterable<int>.generate(_maxAllocatedResources).map((i) async {
-                var iterationRequest = await request();
-
-                try {
-                  while (iterator.moveNext()) {
-                    // caching `current` is necessary because there are async breaks
-                    // in this code and `iterator` is shared across many workers
-                    final current = iterator.current;
-
-                    _resetTimer();
-
-                    await resumeCompleter?.future;
-
-                    if (cancelPending) {
-                      break;
-                    }
-
-                    T value;
-                    try {
-                      value = await action(current);
-                    } catch (e, stack) {
-                      if (onError(current, e, stack)) {
-                        controller.addError(e, stack);
-                      }
-                      continue;
-                    }
-                    controller.add(value);
-                  }
-                } catch (e, stack) {
-                  controller.addError(e, stack);
-                } finally {
-                  iterationRequest.release();
-                }
-              }),
+              Iterable.generate(_maxAllocatedResources)
+                  .map((_) => withResource(run)),
               eagerError: true)
           .catchError((error, StackTrace stack) {
         controller.addError(error, stack);
