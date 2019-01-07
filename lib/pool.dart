@@ -188,9 +188,7 @@ class Pool {
               Iterable.generate(_maxAllocatedResources)
                   .map((_) => withResource(run)),
               eagerError: true)
-          .catchError((error, StackTrace stack) {
-        controller.addError(error, stack);
-      });
+          .catchError(controller.addError);
 
       doneFuture.whenComplete(controller.close);
     }
