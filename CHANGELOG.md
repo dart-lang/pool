@@ -3,6 +3,8 @@
 * Add `forEach` to `Pool` to support efficient async processing of an
   `Iterable`.
 
+* Throw ArgumentError if poolSize <= 0
+
 ## 1.3.6
 
 * Set max SDK version to `<3.0.0`, and adjust other dependencies.
