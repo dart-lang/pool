@@ -545,7 +545,7 @@ void main() {
           });
         }
       }
-    });
+    }, testOn: 'vm');
 
     test('partial iteration', () async {
       pool = Pool(5);
