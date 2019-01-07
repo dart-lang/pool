@@ -125,6 +125,97 @@ class Pool {
     }
   }
 
+  /// Returns a [Stream] containing the result of [action] applied to each
+  /// element of [sourceItems].
+  ///
+  /// If [action] throws an error the source item along with the error object
+  /// and [StackTrace] are passed to [onError], if it is provided. If [onError]
+  /// returns `true`, the error is added to the returned [Stream], otherwise
+  /// it is ignored.
+  ///
+  /// Errors thrown from iterating [sourceItems] will not be passed to
+  /// [onError]. They will always be added to the returned stream as an error.
+  Stream<T> forEach<S, T>(Iterable<S> sourceItems, FutureOr<T> action(S source),
+      {bool onError(S item, Object error, StackTrace stack)}) {
+    onError ??= (item, e, s) => true;
+
+    var cancelPending = false;
+
+    Completer resumeCompleter;
+    StreamController<T> controller;
+
+    Future doneFuture;
+
+    void onListen() {
+      assert(doneFuture == null);
+
+      var iterator = sourceItems.iterator;
+
+      doneFuture = Future.wait(
+        Iterable<int>.generate(_maxAllocatedResources).map((i) async {
+          var iterationRequest = await request();
+
+          try {
+            while (iterator.moveNext()) {
+              // caching `current` is necessary because there are async breaks
+              // in this code and `iterator` is shared across many workers
+              final current = iterator.current;
+
+              _resetTimer();
+
+              await resumeCompleter?.future;
+
+              if (cancelPending) {
+                break;
+              }
+
+              T value;
+              try {
+                value = await action(current);
+              } catch (e, stack) {
+                if (onError(current, e, stack)) {
+                  controller.addError(e, stack);
+                }
+                continue;
+              }
+              controller.add(value);
+            }
+          } catch (e, stack) {
+            controller.addError(e, stack);
+          } finally {
+            iterationRequest.release();
+          }
+        }),
+        eagerError: true
+      ).catchError((error, StackTrace stack) {
+        controller.addError(error, stack);
+      });
+
+      doneFuture.whenComplete(controller.close);
+    }
+
+    controller = StreamController<T>(
+      sync: true,
+      onListen: onListen,
+      onCancel: () async {
+        assert(!cancelPending);
+        cancelPending = true;
+        await doneFuture;
+      },
+      onPause: () {
+        assert(resumeCompleter == null);
+        resumeCompleter = Completer();
+      },
+      onResume: () {
+        assert(resumeCompleter != null);
+        resumeCompleter.complete();
+        resumeCompleter = null;
+      },
+    );
+
+    return controller.stream;
+  }
+
   /// Closes the pool so that no more resources are requested.
   ///
   /// Existing resource requests remain unchanged.

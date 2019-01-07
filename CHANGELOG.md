@@ -1,3 +1,8 @@
+## 1.4.0
+
+* Add `forEach` to `Pool` to support efficient async processing of an
+  `Iterable`.
+
 ## 1.3.6
 
 * Set max SDK version to `<3.0.0`, and adjust other dependencies.
