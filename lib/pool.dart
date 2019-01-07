@@ -126,9 +126,9 @@ class Pool {
   }
 
   /// Returns a [Stream] containing the result of [action] applied to each
-  /// element of [sourceItems].
+  /// element of [elements].
   ///
-  /// While [action] is invoked on each element of [sourceItems] in order,
+  /// While [action] is invoked on each element of [elements] in order,
   /// it's possible the return [Stream] may have items out-of-order – especially
   /// if the completion time of [action] varies.
   ///
@@ -137,9 +137,9 @@ class Pool {
   /// returns `true`, the error is added to the returned [Stream], otherwise
   /// it is ignored.
   ///
-  /// Errors thrown from iterating [sourceItems] will not be passed to
+  /// Errors thrown from iterating [elements] will not be passed to
   /// [onError]. They will always be added to the returned stream as an error.
-  Stream<T> forEach<S, T>(Iterable<S> sourceItems, FutureOr<T> action(S source),
+  Stream<T> forEach<S, T>(Iterable<S> elements, FutureOr<T> action(S source),
       {bool onError(S item, Object error, StackTrace stack)}) {
     onError ??= (item, e, s) => true;
 
@@ -153,7 +153,7 @@ class Pool {
     void onListen() {
       assert(doneFuture == null);
 
-      var iterator = sourceItems.iterator;
+      var iterator = elements.iterator;
 
       doneFuture = Future.wait(
               Iterable<int>.generate(_maxAllocatedResources).map((i) async {
