@@ -144,8 +144,9 @@ class Pool {
   ///
   /// Errors thrown from iterating [elements] will not be passed to
   /// [onError]. They will always be added to the returned stream as an error.
-  Stream<T> forEach<S, T>(Iterable<S> elements, FutureOr<T> action(S source),
-      {bool onError(S item, Object error, StackTrace stack)}) {
+  Stream<T> forEach<S, T>(
+      Iterable<S> elements, FutureOr<T> Function(S source) action,
+      {bool Function(S item, Object error, StackTrace stack) onError}) {
     onError ??= (item, e, s) => true;
 
     var cancelPending = false;
