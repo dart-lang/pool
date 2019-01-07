@@ -128,6 +128,10 @@ class Pool {
   /// Returns a [Stream] containing the result of [action] applied to each
   /// element of [sourceItems].
   ///
+  /// While [action] is invoked on each element of [sourceItems] in order,
+  /// it's possible the return [Stream] may have items out-of-order – especially
+  /// if the completion time of [action] varies.
+  ///
   /// If [action] throws an error the source item along with the error object
   /// and [StackTrace] are passed to [onError], if it is provided. If [onError]
   /// returns `true`, the error is added to the returned [Stream], otherwise
@@ -152,42 +156,42 @@ class Pool {
       var iterator = sourceItems.iterator;
 
       doneFuture = Future.wait(
-        Iterable<int>.generate(_maxAllocatedResources).map((i) async {
-          var iterationRequest = await request();
+              Iterable<int>.generate(_maxAllocatedResources).map((i) async {
+                var iterationRequest = await request();
 
-          try {
-            while (iterator.moveNext()) {
-              // caching `current` is necessary because there are async breaks
-              // in this code and `iterator` is shared across many workers
-              final current = iterator.current;
+                try {
+                  while (iterator.moveNext()) {
+                    // caching `current` is necessary because there are async breaks
+                    // in this code and `iterator` is shared across many workers
+                    final current = iterator.current;
 
-              _resetTimer();
+                    _resetTimer();
 
-              await resumeCompleter?.future;
+                    await resumeCompleter?.future;
 
-              if (cancelPending) {
-                break;
-              }
+                    if (cancelPending) {
+                      break;
+                    }
 
-              T value;
-              try {
-                value = await action(current);
-              } catch (e, stack) {
-                if (onError(current, e, stack)) {
+                    T value;
+                    try {
+                      value = await action(current);
+                    } catch (e, stack) {
+                      if (onError(current, e, stack)) {
+                        controller.addError(e, stack);
+                      }
+                      continue;
+                    }
+                    controller.add(value);
+                  }
+                } catch (e, stack) {
                   controller.addError(e, stack);
+                } finally {
+                  iterationRequest.release();
                 }
-                continue;
-              }
-              controller.add(value);
-            }
-          } catch (e, stack) {
-            controller.addError(e, stack);
-          } finally {
-            iterationRequest.release();
-          }
-        }),
-        eagerError: true
-      ).catchError((error, StackTrace stack) {
+              }),
+              eagerError: true)
+          .catchError((error, StackTrace stack) {
         controller.addError(error, stack);
       });
 
