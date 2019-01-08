@@ -187,7 +187,6 @@ class Pool {
         }
         controller.add(value);
       }
-      print('r$i finished');
     }
 
     Future doneFuture;
