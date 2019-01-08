@@ -472,6 +472,28 @@ void main() {
       }
     }
 
+    test('pool closed before listen', () async {
+      pool = Pool(2);
+
+      var stream = pool.forEach(Iterable<int>.generate(5), delayedToString);
+
+      await pool.close();
+
+      expect(stream.toList(), throwsStateError);
+    });
+
+    test('completes even if the pool is partialed used', () async {
+      pool = Pool(2);
+
+      var resource = await pool.request();
+
+      var stream = pool.forEach(<int>[], delayedToString);
+
+      expect(await stream.length, 0);
+
+      resource.release();
+    });
+
     test('stream paused longer than timeout', () async {
       pool = Pool(2, timeout: delayedToStringDuration);
 

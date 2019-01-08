@@ -145,8 +145,11 @@ class Pool {
   /// Errors thrown from iterating [elements] will not be passed to
   /// [onError]. They will always be added to the returned stream as an error.
   ///
-  /// Note: all of the resources of the `this` [Pool] will be used when the
-  /// returned [Stream] is listened to until it is closed or canceled.
+  /// Note: all of the resources of the this [Pool] will be used when the
+  /// returned [Stream] is listened to until it is completed or canceled.
+  ///
+  /// Note: if this [Pool] is closed before the returned [Stream] is listened
+  /// to, a [StateError] is thrown.
   Stream<T> forEach<S, T>(
       Iterable<S> elements, FutureOr<T> Function(S source) action,
       {bool Function(S item, Object error, StackTrace stack) onError}) {
@@ -159,7 +162,7 @@ class Pool {
 
     Iterator<S> iterator;
 
-    Future<void> run() async {
+    Future<void> run(int i) async {
       while (iterator.moveNext()) {
         // caching `current` is necessary because there are async breaks
         // in this code and `iterator` is shared across many workers
@@ -184,6 +187,7 @@ class Pool {
         }
         controller.add(value);
       }
+      print('r$i finished');
     }
 
     Future doneFuture;
@@ -194,8 +198,8 @@ class Pool {
 
       assert(doneFuture == null);
       doneFuture = Future.wait(
-              Iterable.generate(_maxAllocatedResources)
-                  .map((_) => withResource(run)),
+              Iterable<int>.generate(_maxAllocatedResources)
+                  .map((i) => withResource(() => run(i))),
               eagerError: true)
           .catchError(controller.addError);
 
