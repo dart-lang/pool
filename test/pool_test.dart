@@ -482,7 +482,7 @@ void main() {
       expect(stream.toList(), throwsStateError);
     });
 
-    test('completes even if the pool is partialed used', () async {
+    test('completes even if the pool is partially used', () async {
       pool = Pool(2);
 
       var resource = await pool.request();
