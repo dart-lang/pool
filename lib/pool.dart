@@ -130,6 +130,39 @@ class Pool {
     }
   }
 
+  Future<void> forEachItem<T>(
+      Iterable<T> elements, FutureOr<void> Function(T source) action,
+      {bool Function(T item, Object error, StackTrace stack) onError}) {
+    onError ??= (item, e, s) => true;
+
+    Iterator<T> iterator;
+
+    Future<void> run() async {
+      while (iterator.moveNext()) {
+        // caching `current` is necessary because there are async breaks
+        // in this code and `iterator` is shared across many workers
+        final current = iterator.current;
+
+        _resetTimer();
+
+        try {
+          await action(current);
+        } catch (e, stack) {
+          if (onError(current, e, stack)) {
+            rethrow;
+          }
+        }
+      }
+    }
+
+    iterator = elements.iterator;
+
+    return Future.wait(
+        Iterable<int>.generate(_maxAllocatedResources)
+            .map((i) => withResource(run)),
+        eagerError: true);
+  }
+
   /// Returns a [Stream] containing the result of [action] applied to each
   /// element of [elements].
   ///
@@ -154,55 +187,39 @@ class Pool {
       Iterable<S> elements, FutureOr<T> Function(S source) action,
       {bool Function(S item, Object error, StackTrace stack) onError}) {
     onError ??= (item, e, s) => true;
-
     var cancelPending = false;
 
     Completer resumeCompleter;
     StreamController<T> controller;
 
-    Iterator<S> iterator;
-
-    Future<void> run(int i) async {
-      while (iterator.moveNext()) {
-        // caching `current` is necessary because there are async breaks
-        // in this code and `iterator` is shared across many workers
-        final current = iterator.current;
-
-        _resetTimer();
-
-        if (resumeCompleter != null) {
-          await resumeCompleter.future;
-        }
-
-        if (cancelPending) {
-          break;
-        }
-
-        T value;
-        try {
-          value = await action(current);
-        } catch (e, stack) {
-          if (onError(current, e, stack)) {
-            controller.addError(e, stack);
-          }
-          continue;
-        }
-        controller.add(value);
-      }
-    }
-
     Future doneFuture;
 
-    void onListen() {
-      assert(iterator == null);
-      iterator = elements.iterator;
+    Future<void> run(S item) async {
+      if (resumeCompleter != null) {
+        await resumeCompleter.future;
+      }
 
+      if (cancelPending) {
+        return;
+      }
+
+      T value;
+      try {
+        value = await action(item);
+      } catch (e, stack) {
+        if (onError(item, e, stack)) {
+          controller.addError(e, stack);
+        }
+        return;
+      }
+      controller.add(value);
+    }
+
+    void onListen() {
       assert(doneFuture == null);
-      doneFuture = Future.wait(
-              Iterable<int>.generate(_maxAllocatedResources)
-                  .map((i) => withResource(() => run(i))),
-              eagerError: true)
-          .catchError(controller.addError);
+      doneFuture = forEachItem(elements, run, onError: (a, b, c) {
+        assert(false, ['Should never get here!', a, b, c].join('\n'));
+      }).catchError(controller.addError);
 
       doneFuture.whenComplete(controller.close);
     }
