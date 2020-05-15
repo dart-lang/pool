@@ -739,8 +739,6 @@ void Function() expectNoAsync() {
 ///
 /// This should only be called within a [FakeAsync.run] zone.
 Matcher get doesNotComplete => predicate((Future future) {
-      expect(future, const TypeMatcher<Future>());
-
       var stack = Trace.current(1);
       future.then((_) => registerException(
           TestFailure('Expected future not to complete.'), stack));
