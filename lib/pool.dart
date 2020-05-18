@@ -160,13 +160,13 @@ class Pool {
     Completer? resumeCompleter;
     late StreamController<T> controller;
 
-    Iterator<S>? iterator;
+    late Iterator<S> iterator;
 
     Future<void> run(int i) async {
-      while (iterator!.moveNext()) {
+      while (iterator.moveNext()) {
         // caching `current` is necessary because there are async breaks
         // in this code and `iterator` is shared across many workers
-        final current = iterator!.current;
+        final current = iterator.current;
 
         _resetTimer();
 
@@ -194,7 +194,6 @@ class Pool {
     Future? doneFuture;
 
     void onListen() {
-      assert(iterator == null);
       iterator = elements.iterator;
 
       assert(doneFuture == null);
