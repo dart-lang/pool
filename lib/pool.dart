@@ -162,7 +162,7 @@ class Pool {
 
     late Iterator<S> iterator;
 
-    Future<void> run(int i) async {
+    Future<void> run(int _) async {
       while (iterator.moveNext()) {
         // caching `current` is necessary because there are async breaks
         // in this code and `iterator` is shared across many workers
@@ -191,16 +191,16 @@ class Pool {
       }
     }
 
-    Future? doneFuture;
+    Future<void>? doneFuture;
 
     void onListen() {
       iterator = elements.iterator;
 
       assert(doneFuture == null);
-      doneFuture = Future.wait(
-              Iterable<int>.generate(_maxAllocatedResources)
-                  .map((i) => withResource(() => run(i))),
-              eagerError: true)
+      var futures = Iterable<Future<void>>.generate(
+          _maxAllocatedResources, (i) => withResource(() => run(i)));
+      doneFuture = Future.wait(futures, eagerError: true)
+          .then<void>((_) {})
           .catchError(controller.addError);
 
       doneFuture!.whenComplete(controller.close);
@@ -216,7 +216,7 @@ class Pool {
       },
       onPause: () {
         assert(resumeCompleter == null);
-        resumeCompleter = Completer();
+        resumeCompleter = Completer<void>();
       },
       onResume: () {
         assert(resumeCompleter != null);
