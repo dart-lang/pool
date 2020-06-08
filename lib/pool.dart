@@ -200,12 +200,8 @@ class Pool {
       var futures = Iterable<int>.generate(_maxAllocatedResources)
           .map((i) => withResource(() => run(i)));
       doneFuture = Future.wait(futures, eagerError: true)
-          .catchError((Object e, StackTrace s) {
-        controller.addError(e, s);
-        // We now have to return a valid value from catchError or else you get
-        // a type error.
-        return <void>[];
-      });
+          .then<void>((_) {})
+          .catchError(controller.addError);
 
       doneFuture!.whenComplete(controller.close);
     }
