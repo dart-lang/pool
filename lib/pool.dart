@@ -197,8 +197,8 @@ class Pool {
       iterator = elements.iterator;
 
       assert(doneFuture == null);
-      var futures = Iterable<int>.generate(_maxAllocatedResources)
-          .map((i) => withResource(() => run(i)));
+      var futures = Iterable<Future<void>>.generate(
+          _maxAllocatedResources, (i) => withResource(() => run(i)));
       doneFuture = Future.wait(futures, eagerError: true)
           .then<void>((_) {})
           .catchError(controller.addError);
