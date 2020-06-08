@@ -19,7 +19,7 @@ jobs:
       name: "Vm Tests"
       dart: be/raw/latest
       os: linux
-      script: pub run --enable-experiment=non-nullable test -p vm 
+      script: pub run --enable-experiment=non-nullable test -p vm
 
 stages:
   - analyze_and_format
