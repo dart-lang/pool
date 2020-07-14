@@ -1,25 +1,30 @@
 language: dart
 
 dart:
- - be/raw/latest
+ - dev
 
 jobs:
   include:
     - stage: analyze_and_format
       name: "Analyze"
-      dart: be/raw/latest
+      dart: dev
       os: linux
       script: dartanalyzer --enable-experiment=non-nullable --fatal-warnings --fatal-infos .
     - stage: analyze_and_format
       name: "Format"
-      dart: be/raw/latest
+      dart: dev
       os: linux
       script: dartfmt -n --set-exit-if-changed .
     - stage: test
       name: "Vm Tests"
-      dart: be/raw/latest
+      dart: dev
       os: linux
       script: pub run --enable-experiment=non-nullable test -p vm
+    - stage: test
+      name: "Web Tests"
+      dart: dev
+      os: linux
+      script: pub run --enable-experiment=non-nullable test -p chrome
 
 stages:
   - analyze_and_format
