@@ -36,10 +36,8 @@ class Pool {
   /// first regardless of what order the `onRelease` callbacks complete in.
   final _onReleaseCompleters = Queue<Completer<PoolResource>>();
 
-  final int _maxAllocatedResources;
-
   /// The maximum number of resources that may be allocated at once.
-  int get maxAllocatedResources => _maxAllocatedResources;
+  final int maxAllocatedResources;
 
   int _allocatedResources = 0;
 
@@ -48,7 +46,7 @@ class Pool {
 
   /// The status of the pool, whether it can provide a resource.
   bool get hasAvailableResources =>
-      _maxAllocatedResources != _allocatedResources;
+      maxAllocatedResources != _allocatedResources;
 
   /// The timeout timer.
   ///
