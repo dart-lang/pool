@@ -17,7 +17,7 @@ import 'package:stack_trace/stack_trace.dart';
 /// The pool will ensure that only a certain number of [PoolResource]s may be
 /// allocated at once.
 class Pool {
-  /// Completers for requests beyond the first [_maxAllocatedResources].
+  /// Completers for requests beyond the first [maxAllocatedResources].
   ///
   /// When an item is released, the next element of [_requestedResources] will
   /// be completed.
@@ -84,9 +84,9 @@ class Pool {
   /// If [timeout] is passed, then if that much time passes without any activity
   /// all pending [request] futures will throw a [TimeoutException]. This is
   /// intended to avoid deadlocks.
-  Pool(this._maxAllocatedResources, {Duration? timeout}) : _timeout = timeout {
-    if (_maxAllocatedResources <= 0) {
-      throw ArgumentError.value(_maxAllocatedResources, 'maxAllocatedResources',
+  Pool(this.maxAllocatedResources, {Duration? timeout}) : _timeout = timeout {
+    if (maxAllocatedResources <= 0) {
+      throw ArgumentError.value(maxAllocatedResources, 'maxAllocatedResources',
           'Must be greater than zero.');
     }
 
@@ -106,7 +106,7 @@ class Pool {
       throw StateError('request() may not be called on a closed Pool.');
     }
 
-    if (_allocatedResources < _maxAllocatedResources) {
+    if (_allocatedResources < maxAllocatedResources) {
       _allocatedResources++;
       return Future.value(PoolResource._(this));
     } else if (_onReleaseCallbacks.isNotEmpty) {
@@ -204,7 +204,7 @@ class Pool {
 
       assert(doneFuture == null);
       var futures = Iterable<Future<void>>.generate(
-          _maxAllocatedResources, (i) => withResource(() => run(i)));
+          maxAllocatedResources, (i) => withResource(() => run(i)));
       doneFuture = Future.wait(futures, eagerError: true)
           .then<void>((_) {})
           .catchError(controller.addError);
