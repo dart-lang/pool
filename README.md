@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> This repo has moved to https://github.com/dart-lang/tools/tree/main/pkgs/pool
+
 [![Dart CI](https://github.com/dart-lang/pool/actions/workflows/ci.yml/badge.svg)](https://github.com/dart-lang/pool/actions/workflows/ci.yml)
 [![pub package](https://img.shields.io/pub/v/pool.svg)](https://pub.dev/packages/pool)
 [![package publisher](https://img.shields.io/pub/publisher/pool.svg)](https://pub.dev/packages/pool/publisher)
